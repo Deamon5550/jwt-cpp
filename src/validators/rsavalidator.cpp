@@ -89,6 +89,7 @@ Error:
 
 EVP_PKEY *RSAValidator::LoadKey(const char *key, bool public_key) {
     EVP_PKEY *evp_pkey = NULL;
+    X509* cert = NULL;
     BIO *keybio = BIO_new_mem_buf(
         const_cast<void *>(reinterpret_cast<const void *>(key)), -1);
     if (keybio == NULL) {
@@ -96,11 +97,18 @@ EVP_PKEY *RSAValidator::LoadKey(const char *key, bool public_key) {
     }
 
     if (public_key) {
-        evp_pkey = PEM_read_bio_PUBKEY(keybio, &evp_pkey, NULL, NULL);
+        cert = PEM_read_bio_X509(keybio, NULL, 0, NULL);
+        if(cert) {
+            evp_pkey = X509_get_pubkey(cert);
+        }
+//        evp_pkey = PEM_read_bio_PUBKEY(keybio, &evp_pkey, NULL, NULL);
     } else {
         evp_pkey = PEM_read_bio_PrivateKey(keybio, &evp_pkey, NULL, NULL);
     }
 
+    if (cert) {
+        X509_free(cert);
+    }
     BIO_free(keybio);
 
     if (evp_pkey == NULL) {
